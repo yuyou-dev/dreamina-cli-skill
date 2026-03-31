@@ -1,0 +1,7 @@
+interface:
+  display_name: "Dreamina CLI"
+  short_description: "Run Dreamina generation and task wrappers"
+  default_prompt: "Use $dreamina-cli to inspect capabilities, choose the right wrapper script, and run a Dreamina generation or task query."
+
+policy:
+  allow_implicit_invocation: true
