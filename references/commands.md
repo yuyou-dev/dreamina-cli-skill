@@ -81,11 +81,11 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 ### Session and environment
 
 - `login.py`
-  - Optional: `--debug`
+  - Optional: `--debug`, `--headless`
 - `logout.py`
   - No task-specific parameters
 - `relogin.py`
-  - Optional: `--debug`
+  - Optional: `--debug`, `--headless`
 - `version.py`
   - No task-specific parameters
 

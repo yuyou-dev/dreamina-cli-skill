@@ -50,10 +50,16 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## 登录与自检
 
-发起登录:
+发起常规浏览器登录:
 
 ```bash
 dreamina login
+```
+
+如果是 Agent 远程驱动或无浏览器环境，推荐使用无头模式（需本地装有 Google Chrome），在终端渲染二维码：
+
+```bash
+dreamina login --headless
 ```
 
 浏览器没拉起，或者回调卡住时:

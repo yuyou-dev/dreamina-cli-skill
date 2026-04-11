@@ -290,9 +290,8 @@ def validate_text2image(namespace: argparse.Namespace) -> None:
         "4.5",
         "4.6",
         "5.0",
-        "lab",
     }:
-        raise DreaminaWrapperError("resolution_type=4k only supports 4.x, 5.0, or lab.")
+        raise DreaminaWrapperError("resolution_type=4k only supports 4.x or 5.0.")
 
 
 def validate_image2video(namespace: argparse.Namespace) -> None:
@@ -306,6 +305,8 @@ def validate_image2video(namespace: argparse.Namespace) -> None:
         "3.5pro",
         "seedance2.0",
         "seedance2.0fast",
+        "seedance2.0_vip",
+        "seedance2.0fast_vip",
     }:
         raise DreaminaWrapperError(
             f"Unsupported image2video model_version: {namespace.model_version}"
@@ -485,7 +486,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0", "lab"),
+                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -516,7 +517,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("4.0", "4.1", "4.5", "4.6", "5.0", "lab"),
+                choices=("4.0", "4.1", "4.5", "4.6", "5.0"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -565,7 +566,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast"),
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -603,7 +604,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.5pro", "seedance2.0", "seedance2.0fast"),
+                choices=("3.0", "3.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
             ),
             ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int"),
             ParameterSpec("video_resolution", "video_resolution", "Video resolution override."),
@@ -653,7 +654,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast"),
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -698,7 +699,10 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         name="login",
         description="Reuse the current Dreamina login session or start the browser login flow.",
         output_mode="text",
-        parameters=(ParameterSpec("debug", "debug", "Show manual-import troubleshooting output.", value_type="bool"),),
+        parameters=(
+            ParameterSpec("debug", "debug", "Show manual-import troubleshooting output.", value_type="bool"),
+            ParameterSpec("headless", "headless", "Headless Google Chrome for remote login.", value_type="bool"),
+        ),
         examples=("python3 .agent/skills/dreamina-cli/scripts/login.py --debug",),
     ),
     "logout": CommandSpec(
@@ -711,7 +715,10 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         name="relogin",
         description="Clear the current Dreamina session and force a fresh browser login.",
         output_mode="text",
-        parameters=(ParameterSpec("debug", "debug", "Show manual-import troubleshooting output.", value_type="bool"),),
+        parameters=(
+            ParameterSpec("debug", "debug", "Show manual-import troubleshooting output.", value_type="bool"),
+            ParameterSpec("headless", "headless", "Headless Google Chrome for remote login.", value_type="bool"),
+        ),
         examples=("python3 .agent/skills/dreamina-cli/scripts/relogin.py --debug",),
     ),
     "version": CommandSpec(

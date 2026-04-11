@@ -65,6 +65,7 @@ If a generation wrapper returns `gen_status=fail`, the wrapper converts that to 
 ## Safety rules
 
 - Reuse the current login session unless the user explicitly asks to login, logout, or relogin.
+- When you do need to invoke login or relogin, prefer using the `--headless` flag (e.g., `python3 scripts/login.py --headless`) to render the QR code in the terminal, as it avoids hanging on GUI browser callbacks in remote/agent environments.
 - Some models may require a one-time Dreamina Web confirmation. If the CLI reports `AigcComplianceConfirmationRequired`, tell the user to finish that web-side authorization and retry.
 - Prefer small, reviewable generation batches.
 - Keep track of `submit_id` for all async tasks.
