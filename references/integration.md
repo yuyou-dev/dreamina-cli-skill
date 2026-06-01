@@ -69,8 +69,10 @@ Suggested node mapping:
   - `list_task`
   - `user_credit`
   - `login`
+  - `login_checklogin`
   - `logout`
   - `relogin`
+  - `session`
   - `version`
   - `list_capabilities`
 

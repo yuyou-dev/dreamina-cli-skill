@@ -40,8 +40,10 @@ Treat `dreamina -h` and `dreamina <subcommand> -h` as the final source of truth 
   - `user_credit.py`
 - Session operations:
   - `login.py`
+  - `login_checklogin.py`
   - `logout.py`
   - `relogin.py`
+  - `session.py`
 - Capability discovery:
   - `list_capabilities.py`
 - CLI version check:
@@ -65,7 +67,7 @@ If a generation wrapper returns `gen_status=fail`, the wrapper converts that to 
 ## Safety rules
 
 - Reuse the current login session unless the user explicitly asks to login, logout, or relogin.
-- When you do need to invoke login or relogin, prefer using the `--headless` flag (e.g., `python3 scripts/login.py --headless`) to render the QR code in the terminal, as it avoids hanging on GUI browser callbacks in remote/agent environments.
+- When you do need to invoke login or relogin, prefer using the `--headless` flag (e.g., `python3 scripts/login.py --headless`) to print OAuth Device Flow authorization material. After the user authorizes in the browser, use `python3 scripts/login_checklogin.py --device-code <device_code> --poll 30`.
 - Some models may require a one-time Dreamina Web confirmation. If the CLI reports `AigcComplianceConfirmationRequired`, tell the user to finish that web-side authorization and retry.
 - Prefer small, reviewable generation batches.
 - Keep track of `submit_id` for all async tasks.
