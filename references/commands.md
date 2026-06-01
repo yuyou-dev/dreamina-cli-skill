@@ -33,28 +33,33 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 
 - `text2image.py`
   - Required: `--prompt`
-  - Optional: `--ratio`, `--resolution-type`, `--model-version`, `--poll`
+  - Optional: `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--poll`
 - `image2image.py`
   - Required: `--images`
-  - Optional: `--prompt`, `--ratio`, `--resolution-type`, `--model-version`, `--poll`
+  - Optional: `--prompt`, `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--poll`
 - `image_upscale.py`
   - Required: `--image`
-  - Optional: `--resolution-type`, `--poll`
+  - Optional: `--session`, `--resolution-type`, `--poll`
 
 ### Video generation
 
 - `text2video.py`
   - Required: `--prompt`
-  - Optional: `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Optional: `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Notes:
+    - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `image2video.py`
   - Required: `--image`, `--prompt`
-  - Optional: `--duration`, `--video-resolution`, `--model-version`, `--poll`
+  - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
   - Notes:
     - model aliases `3.0_fast`, `3.0_pro`, `3.5_pro` are normalized to CLI canonical values
     - advanced controls require `--model-version`
+    - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `frames2video.py`
   - Required: `--first`, `--last`, `--prompt`
-  - Optional: `--duration`, `--video-resolution`, `--model-version`, `--poll`
+  - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
+  - Notes:
+    - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `multiframe2video.py`
   - Required: `--images`
   - Two-image mode:
@@ -63,10 +68,12 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
   - Three-plus-image mode:
     - repeat `--transition-prompt`
     - optional repeated `--transition-duration`
-  - Optional: `--poll`
+  - Optional: `--session`, `--poll`
 - `multimodal2video.py`
   - Required: at least one `--image` or `--video`
-  - Optional: repeated `--image`, repeated `--video`, repeated `--audio`, `--prompt`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Optional: repeated `--image`, repeated `--video`, repeated `--audio`, `--prompt`, `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Notes:
+    - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 
 ### Query, list, and account
 
@@ -81,11 +88,22 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 ### Session and environment
 
 - `login.py`
-  - Optional: `--debug`, `--headless`
+  - Optional: `--headless`
+- `login_checklogin.py`
+  - Required: `--device-code`
+  - Optional: `--poll`
 - `logout.py`
   - No task-specific parameters
 - `relogin.py`
-  - Optional: `--debug`, `--headless`
+  - Optional: `--headless`
+- `session.py`
+  - Required: `--action`
+  - Actions:
+    - `create`: optional `--name`
+    - `list`: optional `--max-count`
+    - `search`: required `--name`
+    - `rename`: required `--session-id`, `--name`
+    - `delete`: required `--session-id`
 - `version.py`
   - No task-specific parameters
 

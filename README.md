@@ -50,22 +50,22 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## 登录与自检
 
-发起常规浏览器登录:
+发起常规 OAuth Device Flow 登录:
 
 ```bash
 dreamina login
 ```
 
-如果是 Agent 远程驱动或无浏览器环境，推荐使用无头模式（需本地装有 Google Chrome），在终端渲染二维码：
+如果是 Agent 远程驱动或无浏览器环境，推荐使用无头模式获取 `verification_uri`、`user_code` 和 `device_code`:
 
 ```bash
 dreamina login --headless
 ```
 
-浏览器没拉起，或者回调卡住时:
+完成网页授权后，用 `device_code` 检查登录结果:
 
 ```bash
-dreamina login --debug
+dreamina login checklogin --device_code=<device_code> --poll=30
 ```
 
 登录后先做一次自检:
@@ -135,6 +135,15 @@ python3 ./scripts/text2video.py \
   --poll 30
 ```
 
+创建并使用会话:
+
+```bash
+python3 ./scripts/session.py --action create --name "Campaign A"
+python3 ./scripts/text2image.py \
+  --prompt "clean silver ring product shot" \
+  --session 10086
+```
+
 查询异步结果:
 
 ```bash
@@ -194,7 +203,7 @@ dreamina text2video \
   --prompt="镜头推进，一只橘猫从沙发上跳下来" \
   --duration=5 \
   --ratio=16:9 \
-  --video_resolution=720P \
+  --video_resolution=720p \
   --poll=30
 ```
 
@@ -230,6 +239,16 @@ dreamina query_result --submit_id=<submit_id> --download_dir=./downloads
 dreamina list_task
 dreamina list_task --gen_status=success
 dreamina list_task --submit_id=<submit_id>
+```
+
+管理会话:
+
+```bash
+dreamina session create "我的视频项目"
+dreamina session list -n 30
+dreamina session search "视频"
+dreamina session rename 10086 "新项目名"
+dreamina session delete 10086
 ```
 
 ## 运行约定
