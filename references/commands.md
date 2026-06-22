@@ -34,9 +34,11 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 - `text2image.py`
   - Required: `--prompt`
   - Optional: `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--poll`
+  - Supported `--model-version`: `3.0`, `3.1`, `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`
 - `image2image.py`
   - Required: `--images`
   - Optional: `--prompt`, `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--poll`
+  - Supported `--model-version`: `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`
 - `image_upscale.py`
   - Required: `--image`
   - Optional: `--session`, `--resolution-type`, `--poll`
@@ -47,18 +49,21 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
   - Required: `--prompt`
   - Optional: `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
   - Notes:
+    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
     - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `image2video.py`
   - Required: `--image`, `--prompt`
   - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
   - Notes:
     - model aliases `3.0_fast`, `3.0_pro`, `3.5_pro` are normalized to CLI canonical values
+    - supported Seedance values include `seedance2.0mini`
     - advanced controls require `--model-version`
     - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `frames2video.py`
   - Required: `--first`, `--last`, `--prompt`
   - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
   - Notes:
+    - supported Seedance values include `seedance2.0mini`
     - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 - `multiframe2video.py`
   - Required: `--images`
@@ -73,6 +78,7 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
   - Required: at least one `--image` or `--video`
   - Optional: repeated `--image`, repeated `--video`, repeated `--audio`, `--prompt`, `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
   - Notes:
+    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
     - `--video-resolution 1080p` requires `--model-version seedance2.0_vip`
 
 ### Query, list, and account

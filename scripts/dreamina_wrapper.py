@@ -289,6 +289,7 @@ def validate_text2image(namespace: argparse.Namespace) -> None:
         "4.1",
         "4.5",
         "4.6",
+        "4.7",
         "5.0",
     }:
         raise DreaminaWrapperError("resolution_type=4k only supports 4.x or 5.0.")
@@ -307,6 +308,7 @@ def validate_image2video(namespace: argparse.Namespace) -> None:
         "seedance2.0fast",
         "seedance2.0_vip",
         "seedance2.0fast_vip",
+        "seedance2.0mini",
     }:
         raise DreaminaWrapperError(
             f"Unsupported image2video model_version: {namespace.model_version}"
@@ -557,7 +559,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0"),
+                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "4.7", "5.0"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -589,7 +591,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("4.0", "4.1", "4.5", "4.6", "5.0"),
+                choices=("4.0", "4.1", "4.5", "4.6", "4.7", "5.0"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -641,7 +643,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
@@ -681,7 +683,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                choices=("3.0", "3.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini"),
             ),
             ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int"),
             ParameterSpec("video_resolution", "video_resolution", "Video resolution override.", choices=("720p", "1080p")),
@@ -733,7 +735,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini"),
             ),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
