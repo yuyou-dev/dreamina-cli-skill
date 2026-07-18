@@ -289,8 +289,8 @@ def validate_parameter_ranges(spec: CommandSpec, namespace: argparse.Namespace) 
 
 
 def validate_text2image(namespace: argparse.Namespace) -> None:
-    if namespace.resolution_type == "1k" and namespace.model_version not in {"3.0", "3.1"}:
-        raise DreaminaWrapperError("resolution_type=1k requires model_version=3.0 or 3.1.")
+    if namespace.resolution_type == "1k" and namespace.model_version not in {"3.0", "3.1", "5.0Pro"}:
+        raise DreaminaWrapperError("resolution_type=1k requires model_version=3.0, 3.1, or 5.0Pro.")
 
     if namespace.resolution_type == "4k" and namespace.model_version and namespace.model_version not in {
         "4.0",
@@ -299,8 +299,14 @@ def validate_text2image(namespace: argparse.Namespace) -> None:
         "4.6",
         "4.7",
         "5.0",
+        "5.0Pro",
     }:
-        raise DreaminaWrapperError("resolution_type=4k only supports 4.x or 5.0.")
+        raise DreaminaWrapperError("resolution_type=4k only supports 4.x, 5.0, or 5.0Pro.")
+
+
+def validate_image2image(namespace: argparse.Namespace) -> None:
+    if namespace.resolution_type == "1k" and namespace.model_version != "5.0Pro":
+        raise DreaminaWrapperError("image2image resolution_type=1k requires model_version=5.0Pro.")
 
 
 def validate_image2video(namespace: argparse.Namespace) -> None:
@@ -564,7 +570,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "4.7", "5.0"),
+                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"),
             ),
             ParameterSpec(
                 "generate_num",
@@ -584,6 +590,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         name="image2image",
         description="Submit a Dreamina image-to-image task.",
         output_mode="json",
+        validator=validate_image2image,
         parameters=(
             ParameterSpec("images", "images", "One or more local image paths.", required=True, multiple=True, csv_split=True, path_mode="file"),
             ParameterSpec("prompt", "prompt", "Edit prompt."),
@@ -598,13 +605,13 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
                 "resolution_type",
                 "resolution_type",
                 "Resolution tier.",
-                choices=("2k", "4k"),
+                choices=("1k", "2k", "4k"),
             ),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("4.0", "4.1", "4.5", "4.6", "4.7", "5.0"),
+                choices=("4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"),
             ),
             ParameterSpec(
                 "generate_num",

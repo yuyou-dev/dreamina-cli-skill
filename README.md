@@ -255,7 +255,8 @@ dreamina session delete 10086
 
 - 已支持的命令优先走 wrapper，不直接裸调 `dreamina`
 - 默认复用当前本地登录态
-- Seedream 5.0 Pro 在当前 CLI 中使用 `--model_version=5.0`
+- Seedream 5.0 Pro 在当前 CLI 中使用 `--model_version=5.0Pro`
+- `5.0Pro` 支持 `resolution_type` 为 `1k`、`2k` 或 `4k`，CLI 标记为 VIP only
 - `text2image` 和 `image2image` 支持 `--generate_num=1-10`
 - `seedance2.0_vip` 当前支持视频 `720p`、`1080p` 和 `4k`
 - `seedance2.0mini` 按 Seedance 2.0 家族处理，支持 4-15s，分辨率限制为 720p

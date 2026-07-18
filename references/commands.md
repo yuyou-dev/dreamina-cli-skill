@@ -34,16 +34,18 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 - `text2image.py`
   - Required: `--prompt`
   - Optional: `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--generate-num`, `--poll`
-  - Supported `--model-version`: `3.0`, `3.1`, `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`
+  - Supported `--model-version`: `3.0`, `3.1`, `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`, `5.0Pro`
   - Notes:
-    - `5.0` is the current CLI flag value for Seedream 5.0 Pro.
+    - `5.0Pro` is the current CLI flag value for Seedream 5.0 Pro.
+    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; the CLI marks it VIP-only with default `1k`.
     - `--generate-num` maps to CLI `--generate_num` and supports `1-10`.
 - `image2image.py`
   - Required: `--images`
   - Optional: `--prompt`, `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--generate-num`, `--poll`
-  - Supported `--model-version`: `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`
+  - Supported `--model-version`: `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`, `5.0Pro`
   - Notes:
-    - `5.0` is the current CLI flag value for Seedream 5.0 Pro.
+    - `5.0Pro` is the current CLI flag value for Seedream 5.0 Pro.
+    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; the CLI marks it VIP-only with default `1k`.
     - `--generate-num` maps to CLI `--generate_num` and supports `1-10`.
 - `image_upscale.py`
   - Required: `--image`
