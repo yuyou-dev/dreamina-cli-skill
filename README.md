@@ -255,6 +255,10 @@ dreamina session delete 10086
 
 - 已支持的命令优先走 wrapper，不直接裸调 `dreamina`
 - 默认复用当前本地登录态
+- Seedream 5.0 Pro 在当前 CLI 中使用 `--model_version=5.0`
+- `text2image` 和 `image2image` 支持 `--generate_num=1-10`
+- `seedance2.0_vip` 当前支持视频 `720p`、`1080p` 和 `4k`
+- `seedance2.0mini` 按 Seedance 2.0 家族处理，支持 4-15s，分辨率限制为 720p
 - 遇到 `AigcComplianceConfirmationRequired` 时，先完成一次网页侧授权再重试
 - 所有异步任务都保留 `submit_id`
 - 需要更顺手的交互时，默认加 `--poll`
