@@ -40,6 +40,7 @@ curl -fsSL https://jimeng.jianying.com/cli | bash
 ```bash
 dreamina -h
 dreamina version
+python3 ./scripts/audit_cli_help.py
 ```
 
 如果终端里找不到 `dreamina`，先重开 shell。还不行的话，检查 `PATH`。常见安装位置是:
@@ -132,6 +133,7 @@ python3 ./scripts/text2image.py \
 python3 ./scripts/text2video.py \
   --prompt "camera pushes toward a necklace on a gray stage" \
   --duration 5 \
+  --video-resolution 720p \
   --poll 30
 ```
 
@@ -141,6 +143,7 @@ python3 ./scripts/text2video.py \
 python3 ./scripts/session.py --action create --name "Campaign A"
 python3 ./scripts/text2image.py \
   --prompt "clean silver ring product shot" \
+  --resolution-type 2k \
   --session 10086
 ```
 
@@ -224,6 +227,7 @@ dreamina image2video \
   --image ./first_frame.png \
   --prompt="镜头慢慢推近" \
   --duration=5 \
+  --video_resolution=720p \
   --poll=30
 ```
 
@@ -256,10 +260,13 @@ dreamina session delete 10086
 - 已支持的命令优先走 wrapper，不直接裸调 `dreamina`
 - 默认复用当前本地登录态
 - Seedream 5.0 Pro 在当前 CLI 中使用 `--model_version=5.0Pro`
-- `5.0Pro` 支持 `resolution_type` 为 `1k`、`2k` 或 `4k`，CLI 标记为 VIP only
+- `5.0Pro` 支持 `resolution_type` 为 `1k`、`2k` 或 `4k`；图片命令默认模型仍是 `5.0`
+- 图片生成与超清必须显式提供 `resolution_type`，所有视频生成命令必须显式提供 `video_resolution`
+- `text2image`、`image2image` 支持成对的 `width` / `height` 自定义尺寸，且不能与 `ratio` 同时使用
 - `text2image` 和 `image2image` 支持 `--generate_num=1-10`
 - `seedance2.0_vip` 当前支持视频 `720p`、`1080p` 和 `4k`
 - `seedance2.0mini` 按 Seedance 2.0 家族处理，支持 4-15s，分辨率限制为 720p
+- `seedance2.5` 支持 480p/720p、4-30s；全能参考支持纯音频输入及模型化输入上限
 - 遇到 `AigcComplianceConfirmationRequired` 时，先完成一次网页侧授权再重试
 - 所有异步任务都保留 `submit_id`
 - 需要更顺手的交互时，默认加 `--poll`

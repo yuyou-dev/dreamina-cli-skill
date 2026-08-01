@@ -18,13 +18,13 @@ When a flag combination is unclear, verify it with `dreamina <subcommand> -h`.
 Machine-readable inventory:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format json
+python3 ./scripts/list_capabilities.py --format json
 ```
 
 Readable inventory:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdown
+python3 ./scripts/list_capabilities.py --format markdown
 ```
 
 ## 3. Wrapper catalog
@@ -32,50 +32,59 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
 ### Image generation
 
 - `text2image.py`
-  - Required: `--prompt`
-  - Optional: `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--generate-num`, `--poll`
+  - Required: `--prompt`, `--resolution-type`
+  - Optional: `--session`, `--ratio`, paired `--width`/`--height`, `--model-version`, `--generate-num`, `--poll`
   - Supported `--model-version`: `3.0`, `3.1`, `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`, `5.0Pro`
   - Notes:
     - `5.0Pro` is the current CLI flag value for Seedream 5.0 Pro.
-    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; the CLI marks it VIP-only with default `1k`.
+    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; default model is `5.0`.
     - `--generate-num` maps to CLI `--generate_num` and supports `1-10`.
 - `image2image.py`
-  - Required: `--images`
-  - Optional: `--prompt`, `--session`, `--ratio`, `--resolution-type`, `--model-version`, `--generate-num`, `--poll`
+  - Required: `--images`, `--resolution-type`
+  - Input count: `1-10`
+  - Optional: `--prompt`, `--session`, `--ratio`, paired `--width`/`--height`, `--model-version`, `--generate-num`, `--poll`
   - Supported `--model-version`: `4.0`, `4.1`, `4.5`, `4.6`, `4.7`, `5.0`, `5.0Pro`
   - Notes:
     - `5.0Pro` is the current CLI flag value for Seedream 5.0 Pro.
-    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; the CLI marks it VIP-only with default `1k`.
+    - `5.0Pro` supports `--resolution-type 1k`, `2k`, or `4k`; default model is `5.0`.
     - `--generate-num` maps to CLI `--generate_num` and supports `1-10`.
 - `image_upscale.py`
-  - Required: `--image`
-  - Optional: `--session`, `--resolution-type`, `--poll`
+  - Required: `--image`, `--resolution-type`
+  - Optional: `--session`, `--poll`
+
+Custom image dimensions require paired `--width` and `--height` and cannot be combined with `--ratio`. Limits are 512-2016 per side and 1,763,584 total pixels at 1k; 768-3072 and 4,194,304 at 2k; 1536-6240 and 16,777,216 at 4k. Text-to-image models 3.0/3.1 support custom dimensions only at 2k.
 
 ### Video generation
 
 - `text2video.py`
-  - Required: `--prompt`
-  - Optional: `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Required: `--prompt`, `--video-resolution`
+  - Optional: `--session`, `--duration`, `--ratio`, `--model-version`, `--poll`
   - Notes:
-    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
+    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`, `seedance2.5`
     - `--video-resolution 1080p` or `4k` requires `--model-version seedance2.0_vip`
+
+Video model matrix:
+
+- Seedance 2.5: 4-30 seconds, 480p/720p, VIP-only
+- Seedance 2.0 VIP: 4-15 seconds, 720p/1080p/4k
+- Other Seedance 2.0 variants: 4-15 seconds, 720p
+- Image-to-video Seedance 1.0 Fast: 5-10 seconds, 720p
+- Seedance 1.5 Pro: 5-12 seconds, 720p
 - `image2video.py`
-  - Required: `--image`, `--prompt`
-  - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
+  - Required: `--image`, `--prompt`, `--video-resolution`
+  - Optional: `--session`, `--duration`, `--model-version`, `--poll`
   - Notes:
-    - supported `--model-version`: `seedance1.0fast`, `seedance1.0`, `seedance1.5pro`, `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
-    - legacy model aliases `3.0`, `3.0_fast`, `3.0fast`, `3.0_pro`, `3.0pro`, `3.5_pro`, and `3.5pro` are normalized to current CLI canonical values
-    - advanced controls require `--model-version`
+    - supported `--model-version`: `seedance1.0fast`, `seedance1.5pro`, `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`, `seedance2.5`
+    - retired 3.x model aliases are rejected
     - `--video-resolution 1080p` or `4k` requires `--model-version seedance2.0_vip`
 - `frames2video.py`
-  - Required: `--first`, `--last`, `--prompt`
-  - Optional: `--session`, `--duration`, `--video-resolution`, `--model-version`, `--poll`
+  - Required: `--first`, `--last`, `--prompt`, `--video-resolution`
+  - Optional: `--session`, `--duration`, `--model-version`, `--poll`
   - Notes:
-    - supported `--model-version`: `seedance1.5pro`, `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
-    - legacy model aliases `3.5_pro` and `3.5pro` are normalized to `seedance1.5pro`
+    - supported `--model-version`: `seedance1.5pro`, `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`, `seedance2.5`
     - `--video-resolution 1080p` or `4k` requires `--model-version seedance2.0_vip`
 - `multiframe2video.py`
-  - Required: `--images`
+  - Required: `--images`, `--video-resolution` (`720p` or `1080p`)
   - Two-image mode:
     - use `--prompt`
     - optional `--duration`
@@ -84,10 +93,12 @@ python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format markdow
     - optional repeated `--transition-duration`
   - Optional: `--session`, `--poll`
 - `multimodal2video.py`
-  - Required: at least one `--image` or `--video`
-  - Optional: repeated `--image`, repeated `--video`, repeated `--audio`, `--prompt`, `--session`, `--duration`, `--ratio`, `--video-resolution`, `--model-version`, `--poll`
+  - Required: `--video-resolution`; Seedance 2.0 also requires an image or video, while Seedance 2.5 accepts audio-only input
+  - Optional: repeated `--image`, repeated `--video`, repeated `--audio`, `--prompt`, `--session`, `--duration`, `--ratio`, `--model-version`, `--poll`
   - Notes:
-    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`
+    - supported `--model-version`: `seedance2.0`, `seedance2.0fast`, `seedance2.0_vip`, `seedance2.0fast_vip`, `seedance2.0mini`, `seedance2.5`
+    - default model is `seedance2.0_vip`
+    - Seedance 2.5 supports 30 images, 10 videos, 10 audio files, 50 total inputs, and 2-30 second reference media
     - `--video-resolution 1080p` or `4k` requires `--model-version seedance2.0_vip`
 
 ### Query, list, and account
@@ -139,7 +150,7 @@ The underscore forms are also accepted when needed.
 Inspect the generated CLI command without running it:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/text2image.py \
+python3 ./scripts/text2image.py \
   --prompt "clean silver ring product shot" \
   --ratio 1:1 \
   --resolution-type 2k \
@@ -149,7 +160,7 @@ python3 .agent/skills/dreamina-cli/scripts/text2image.py \
 Submit a task and let Dreamina poll briefly:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/text2video.py \
+python3 ./scripts/text2video.py \
   --prompt "camera pushes toward a necklace on a gray stage" \
   --duration 5 \
   --poll 60
@@ -158,7 +169,7 @@ python3 .agent/skills/dreamina-cli/scripts/text2video.py \
 List successful tasks:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/list_task.py --gen-status success --limit 20
+python3 ./scripts/list_task.py --gen-status success --limit 20
 ```
 
 ## 6. Return contract
@@ -201,4 +212,4 @@ The wrappers currently validate:
 - multiframe transition counts
 - multimodal input count limits
 
-The wrappers do not currently inspect media duration or image dimensions. Dreamina CLI remains the final enforcer for those deeper server-side rules.
+The wrappers enforce custom image dimension bounds but do not inspect reference media duration. Dreamina CLI remains the final enforcer for backend-specific rules.
