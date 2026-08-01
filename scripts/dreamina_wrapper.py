@@ -22,10 +22,13 @@ GENERATION_COMMANDS = {
 }
 
 VALID_SUBMIT_STATUSES = {"querying", "success"}
-IMAGE2VIDEO_MODEL_ALIASES = {
-    "3.0_fast": "3.0fast",
-    "3.0_pro": "3.0pro",
-    "3.5_pro": "3.5pro",
+SEEDANCE2_MODELS = {
+    "seedance2.0",
+    "seedance2.0fast",
+    "seedance2.0_vip",
+    "seedance2.0fast_vip",
+    "seedance2.0mini",
+    "seedance2.5",
 }
 
 
@@ -41,6 +44,7 @@ class ParameterSpec:
     csv_split: bool = False
     min_value: float | int | None = None
     max_value: float | int | None = None
+    default: Any = None
     path_mode: str | None = None
     create_dir: bool = False
 
@@ -280,85 +284,94 @@ def validate_parameter_ranges(spec: CommandSpec, namespace: argparse.Namespace) 
                 )
 
 
-def validate_text2image(namespace: argparse.Namespace) -> None:
-    if namespace.resolution_type == "1k" and namespace.model_version not in {"3.0", "3.1"}:
-        raise DreaminaWrapperError("resolution_type=1k requires model_version=3.0 or 3.1.")
+IMAGE_DIMENSION_RULES = {
+    "1k": (512, 2016, 1_763_584),
+    "2k": (768, 3072, 4_194_304),
+    "4k": (1536, 6240, 16_777_216),
+}
 
-    if namespace.resolution_type == "4k" and namespace.model_version and namespace.model_version not in {
-        "4.0",
-        "4.1",
-        "4.5",
-        "4.6",
-        "5.0",
-    }:
-        raise DreaminaWrapperError("resolution_type=4k only supports 4.x or 5.0.")
+
+def validate_image_dimensions(namespace: argparse.Namespace) -> None:
+    width = namespace.width
+    height = namespace.height
+    if (width is None) != (height is None):
+        raise DreaminaWrapperError("width and height must be provided together.")
+    if width is None:
+        return
+    if namespace.ratio is not None:
+        raise DreaminaWrapperError("width/height cannot be used together with ratio.")
+    minimum, maximum, max_pixels = IMAGE_DIMENSION_RULES[namespace.resolution_type]
+    if width < minimum or width > maximum or height < minimum or height > maximum:
+        raise DreaminaWrapperError(
+            f"width and height must each be between {minimum} and {maximum} for {namespace.resolution_type}."
+        )
+    if width * height > max_pixels:
+        raise DreaminaWrapperError(
+            f"width multiplied by height must not exceed {max_pixels} for {namespace.resolution_type}."
+        )
+
+
+def validate_text2image(namespace: argparse.Namespace) -> None:
+    model = namespace.model_version or "5.0"
+    resolution = namespace.resolution_type
+    allowed = {"1k", "2k"} if model in {"3.0", "3.1"} else {"2k", "4k"}
+    if model == "5.0Pro":
+        allowed = {"1k", "2k", "4k"}
+    if resolution not in allowed:
+        raise DreaminaWrapperError(f"resolution_type={resolution} is not supported by model_version={model}.")
+    if model in {"3.0", "3.1"} and namespace.width is not None and resolution != "2k":
+        raise DreaminaWrapperError("Models 3.0 and 3.1 support custom width/height only at 2k.")
+    validate_image_dimensions(namespace)
+
+
+def validate_image2image(namespace: argparse.Namespace) -> None:
+    image_count = len(namespace.images or [])
+    if image_count < 1 or image_count > 10:
+        raise DreaminaWrapperError("image2image requires 1 to 10 images.")
+    model = namespace.model_version or "5.0"
+    if namespace.resolution_type == "1k" and model != "5.0Pro":
+        raise DreaminaWrapperError("image2image resolution_type=1k requires model_version=5.0Pro.")
+    validate_image_dimensions(namespace)
+
+
+def validate_seedance_video_model(namespace: argparse.Namespace, command_name: str) -> None:
+    model = namespace.model_version or "seedance2.0fast"
+    if model not in SEEDANCE2_MODELS:
+        raise DreaminaWrapperError(f"Unsupported {command_name} model_version: {model}")
+    validate_integer_in_range(namespace.duration, 4, 30 if model == "seedance2.5" else 15, "duration")
+    if model == "seedance2.5":
+        allowed_resolutions = {"480p", "720p"}
+    elif model == "seedance2.0_vip":
+        allowed_resolutions = {"720p", "1080p", "4k"}
+    else:
+        allowed_resolutions = {"720p"}
+    validate_choice(namespace.video_resolution, allowed_resolutions, "video_resolution")
+
+
+def validate_text2video(namespace: argparse.Namespace) -> None:
+    validate_seedance_video_model(namespace, "text2video")
 
 
 def validate_image2video(namespace: argparse.Namespace) -> None:
-    if namespace.model_version:
-        namespace.model_version = IMAGE2VIDEO_MODEL_ALIASES.get(namespace.model_version, namespace.model_version)
-
-    if namespace.model_version and namespace.model_version not in {
-        "3.0",
-        "3.0fast",
-        "3.0pro",
-        "3.5pro",
-        "seedance2.0",
-        "seedance2.0fast",
-        "seedance2.0_vip",
-        "seedance2.0fast_vip",
-    }:
-        raise DreaminaWrapperError(
-            f"Unsupported image2video model_version: {namespace.model_version}"
-        )
-
-    advanced_control_requested = any(
-        value is not None
-        for value in (namespace.duration, namespace.video_resolution, namespace.model_version)
-    )
-    if advanced_control_requested and not namespace.model_version:
-        raise DreaminaWrapperError(
-            "When using duration or video_resolution, model_version must also be provided."
-        )
-
-    if not namespace.model_version:
-        return
-
-    if namespace.model_version in {"3.0", "3.0fast"}:
-        validate_integer_in_range(namespace.duration, 3, 10, "duration")
+    namespace.model_version = namespace.model_version or "seedance2.0_vip"
+    if namespace.model_version == "seedance1.0fast":
+        validate_integer_in_range(namespace.duration, 5, 10, "duration")
         validate_choice(namespace.video_resolution, {"720p"}, "video_resolution")
         return
-
-    if namespace.model_version == "3.0pro":
-        validate_integer_in_range(namespace.duration, 3, 10, "duration")
+    if namespace.model_version == "seedance1.5pro":
+        validate_integer_in_range(namespace.duration, 5, 12, "duration")
         validate_choice(namespace.video_resolution, {"720p"}, "video_resolution")
         return
-
-    if namespace.model_version == "3.5pro":
-        validate_integer_in_range(namespace.duration, 4, 12, "duration")
-        validate_choice(namespace.video_resolution, {"720p"}, "video_resolution")
-        return
-
-    validate_integer_in_range(namespace.duration, 4, 15, "duration")
-    validate_seedance_video_resolution(namespace)
+    validate_seedance_video_model(namespace, "image2video")
 
 
 def validate_frames2video(namespace: argparse.Namespace) -> None:
-    effective_model = namespace.model_version or "seedance2.0fast"
-    namespace.effective_model_version = effective_model
-
-    if effective_model == "3.0":
-        validate_integer_in_range(namespace.duration, 3, 10, "duration")
+    namespace.model_version = namespace.model_version or "seedance2.0_vip"
+    if namespace.model_version == "seedance1.5pro":
+        validate_integer_in_range(namespace.duration, 5, 12, "duration")
         validate_choice(namespace.video_resolution, {"720p"}, "video_resolution")
         return
-
-    if effective_model == "3.5pro":
-        validate_integer_in_range(namespace.duration, 4, 12, "duration")
-        validate_choice(namespace.video_resolution, {"720p"}, "video_resolution")
-        return
-
-    validate_integer_in_range(namespace.duration, 4, 15, "duration")
-    validate_seedance_video_resolution(namespace)
+    validate_seedance_video_model(namespace, "frames2video")
 
 
 def validate_multiframe2video(namespace: argparse.Namespace) -> None:
@@ -377,7 +390,7 @@ def validate_multiframe2video(namespace: argparse.Namespace) -> None:
             raise DreaminaWrapperError(
                 "For exactly 2 images, use --prompt and optional --duration instead of transition flags."
             )
-        validate_float_in_range(namespace.duration, 0.5, 8, "duration")
+        validate_float_in_range(namespace.duration, 1, 8, "duration")
         if namespace.duration is not None and namespace.duration < 2:
             raise DreaminaWrapperError("For exactly 2 images, duration must be at least 2 seconds.")
         return
@@ -402,8 +415,8 @@ def validate_multiframe2video(namespace: argparse.Namespace) -> None:
 
     effective_durations = transition_durations or [3.0] * transition_count
     for value in effective_durations:
-        if value < 0.5 or value > 8:
-            raise DreaminaWrapperError("Each transition_duration must be between 0.5 and 8 seconds.")
+        if value < 1 or value > 8:
+            raise DreaminaWrapperError("Each transition_duration must be between 1 and 8 seconds.")
 
     if sum(effective_durations) < 2:
         raise DreaminaWrapperError("The total multiframe2video duration must be at least 2 seconds.")
@@ -414,23 +427,23 @@ def validate_multimodal2video(namespace: argparse.Namespace) -> None:
     videos = namespace.video or []
     audios = namespace.audio or []
 
-    if len(images) > 9:
-        raise DreaminaWrapperError("multimodal2video supports at most 9 images.")
-
-    if len(videos) > 3:
-        raise DreaminaWrapperError("multimodal2video supports at most 3 videos.")
-
-    if len(audios) > 3:
-        raise DreaminaWrapperError("multimodal2video supports at most 3 audio files.")
-
-    if not images and not videos:
-        raise DreaminaWrapperError("multimodal2video requires at least one image or one video.")
-
-    validate_seedance_video_resolution(namespace)
-
-
-def validate_text2video(namespace: argparse.Namespace) -> None:
-    validate_seedance_video_resolution(namespace)
+    model = namespace.model_version or "seedance2.0_vip"
+    namespace.model_version = model
+    if model == "seedance2.5":
+        if len(images) > 30 or len(videos) > 10 or len(audios) > 10:
+            raise DreaminaWrapperError("seedance2.5 supports at most 30 images, 10 videos, and 10 audio files.")
+        if len(images) + len(videos) + len(audios) > 50:
+            raise DreaminaWrapperError("seedance2.5 supports at most 50 total inputs.")
+        if not images and not videos and not audios:
+            raise DreaminaWrapperError("seedance2.5 requires at least one image, video, or audio input.")
+    else:
+        if len(images) > 9 or len(videos) > 3 or len(audios) > 3:
+            raise DreaminaWrapperError("Seedance 2.0 supports at most 9 images, 3 videos, and 3 audio files.")
+        if len(images) + len(videos) + len(audios) > 12:
+            raise DreaminaWrapperError("Seedance 2.0 supports at most 12 total inputs.")
+        if not images and not videos:
+            raise DreaminaWrapperError("Seedance 2.0 multimodal generation requires at least one image or video.")
+    validate_seedance_video_model(namespace, "multimodal2video")
 
 
 def validate_session(namespace: argparse.Namespace) -> None:
@@ -444,27 +457,23 @@ def validate_session(namespace: argparse.Namespace) -> None:
         if session_id is not None or max_count is not None:
             raise DreaminaWrapperError("session create only accepts --name.")
         return
-
     if action == "list":
         if name is not None or session_id is not None:
             raise DreaminaWrapperError("session list only accepts --max-count.")
         return
-
     if action == "search":
         validate_session_name(name, required=True)
         if session_id is not None or max_count is not None:
             raise DreaminaWrapperError("session search only accepts --name.")
         return
-
     if action == "rename":
-        validate_session_id(session_id, allow_zero=False)
+        validate_session_id(session_id)
         validate_session_name(name, required=True)
         if max_count is not None:
             raise DreaminaWrapperError("session rename does not accept --max-count.")
         return
-
     if action == "delete":
-        validate_session_id(session_id, allow_zero=False)
+        validate_session_id(session_id)
         if name is not None or max_count is not None:
             raise DreaminaWrapperError("session delete only accepts --session-id.")
 
@@ -504,21 +513,11 @@ def validate_choice(value: str | None, allowed: set[str], name: str) -> None:
         raise DreaminaWrapperError(f"{name} must be one of: {allowed_text}.")
 
 
-def validate_seedance_video_resolution(namespace: argparse.Namespace) -> None:
-    if namespace.video_resolution != "1080p":
-        return
-
-    if namespace.model_version != "seedance2.0_vip":
-        raise DreaminaWrapperError("video_resolution=1080p requires model_version=seedance2.0_vip.")
-
-
-def validate_session_id(value: int | None, *, allow_zero: bool) -> None:
+def validate_session_id(value: int | None) -> None:
     if value is None:
         raise DreaminaWrapperError("Missing required parameter: --session-id")
-
-    minimum = 0 if allow_zero else 1
-    if value < minimum:
-        raise DreaminaWrapperError(f"--session-id must be >= {minimum}.")
+    if value < 1:
+        raise DreaminaWrapperError("--session-id must be >= 1.")
 
 
 def validate_session_name(value: str | None, *, required: bool) -> None:
@@ -526,9 +525,7 @@ def validate_session_name(value: str | None, *, required: bool) -> None:
         if required:
             raise DreaminaWrapperError("Missing required parameter: --name")
         return
-
-    length = len(value.strip())
-    if length < 1 or length > 50:
+    if len(value.strip()) < 1 or len(value.strip()) > 50:
         raise DreaminaWrapperError("--name must be 1 to 50 characters after trimming spaces.")
 
 
@@ -540,61 +537,74 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         validator=validate_text2image,
         parameters=(
             ParameterSpec("prompt", "prompt", "Generation prompt.", required=True),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
             ParameterSpec(
                 "ratio",
                 "ratio",
                 "Output aspect ratio.",
+                default="16:9",
                 choices=("21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"),
             ),
             ParameterSpec(
                 "resolution_type",
                 "resolution_type",
                 "Resolution tier.",
+                required=True,
                 choices=("1k", "2k", "4k"),
             ),
+            ParameterSpec("width", "width", "Custom output width in pixels.", value_type="int", min_value=1),
+            ParameterSpec("height", "height", "Custom output height in pixels.", value_type="int", min_value=1),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0"),
+                default="5.0",
+                choices=("3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"),
             ),
+            ParameterSpec("generate_num", "generate_num", "Number of images to generate.", value_type="int", min_value=1, max_value=10, default=1),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/text2image.py --prompt "a silver ring on white" --ratio 1:1 --resolution-type 2k',
+            'python3 scripts/text2image.py --prompt "a silver ring on white" --ratio 1:1 --resolution-type 2k',
         ),
     ),
     "image2image": CommandSpec(
         name="image2image",
         description="Submit a Dreamina image-to-image task.",
         output_mode="json",
+        validator=validate_image2image,
         parameters=(
-            ParameterSpec("images", "images", "One or more local image paths.", required=True, multiple=True, csv_split=True, path_mode="file"),
+            ParameterSpec("images", "images", "One to ten local image paths.", required=True, multiple=True, csv_split=True, path_mode="file"),
             ParameterSpec("prompt", "prompt", "Edit prompt."),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
             ParameterSpec(
                 "ratio",
                 "ratio",
                 "Output aspect ratio.",
+                default="16:9",
                 choices=("21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"),
             ),
             ParameterSpec(
                 "resolution_type",
                 "resolution_type",
                 "Resolution tier.",
-                choices=("2k", "4k"),
+                required=True,
+                choices=("1k", "2k", "4k"),
             ),
+            ParameterSpec("width", "width", "Custom output width in pixels.", value_type="int", min_value=1),
+            ParameterSpec("height", "height", "Custom output height in pixels.", value_type="int", min_value=1),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("4.0", "4.1", "4.5", "4.6", "5.0"),
+                default="5.0",
+                choices=("4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"),
             ),
+            ParameterSpec("generate_num", "generate_num", "Number of images to generate.", value_type="int", min_value=1, max_value=10, default=1),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/image2image.py --images ./ref-1.png --images ./ref-2.png --prompt "white background commercial product shot"',
+            'python3 scripts/image2image.py --images ./ref-1.png --images ./ref-2.png --prompt "white background commercial product shot" --resolution-type 2k',
         ),
     ),
     "image_upscale": CommandSpec(
@@ -603,17 +613,18 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         output_mode="json",
         parameters=(
             ParameterSpec("image", "image", "Local image path.", required=True, path_mode="file"),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
             ParameterSpec(
                 "resolution_type",
                 "resolution_type",
                 "Target resolution.",
+                required=True,
                 choices=("2k", "4k", "8k"),
             ),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            "python3 .agent/skills/dreamina-cli/scripts/image_upscale.py --image ./product.png --resolution-type 4k",
+            "python3 scripts/image_upscale.py --image ./product.png --resolution-type 4k",
         ),
     ),
     "text2video": CommandSpec(
@@ -623,30 +634,33 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         validator=validate_text2video,
         parameters=(
             ParameterSpec("prompt", "prompt", "Generation prompt.", required=True),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
-            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", min_value=4, max_value=15),
+            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", min_value=4, max_value=30, default=5),
             ParameterSpec(
                 "ratio",
                 "ratio",
                 "Output aspect ratio.",
+                default="16:9",
                 choices=("1:1", "3:4", "16:9", "4:3", "9:16", "21:9"),
             ),
             ParameterSpec(
                 "video_resolution",
                 "video_resolution",
                 "Video resolution.",
-                choices=("720p", "1080p"),
+                required=True,
+                choices=("480p", "720p", "1080p", "4k"),
             ),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                default="seedance2.0fast",
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini", "seedance2.5"),
             ),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/text2video.py --prompt "camera slowly pushes toward a diamond necklace" --duration 5',
+            'python3 scripts/text2video.py --prompt "camera slowly pushes toward a diamond necklace" --duration 5 --video-resolution 720p',
         ),
     ),
     "image2video": CommandSpec(
@@ -657,14 +671,20 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         parameters=(
             ParameterSpec("image", "image", "Local first-frame image path.", required=True, path_mode="file"),
             ParameterSpec("prompt", "prompt", "Generation prompt.", required=True),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
-            ParameterSpec("duration", "duration", "Advanced duration override.", value_type="int"),
-            ParameterSpec("video_resolution", "video_resolution", "Advanced resolution override.", choices=("720p", "1080p")),
-            ParameterSpec("model_version", "model_version", "Advanced model override."),
+            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", default=5),
+            ParameterSpec("video_resolution", "video_resolution", "Video resolution.", required=True, choices=("480p", "720p", "1080p", "4k")),
+            ParameterSpec(
+                "model_version",
+                "model_version",
+                "Model version.",
+                default="seedance2.0_vip",
+                choices=("seedance1.0fast", "seedance1.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini", "seedance2.5"),
+            ),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/image2video.py --image ./cover.png --prompt "subtle camera push in" --model-version seedance2.0_vip --duration 6 --video-resolution 1080p',
+            'python3 scripts/image2video.py --image ./cover.png --prompt "subtle camera push in" --model-version seedance2.0_vip --duration 6 --video-resolution 1080p',
         ),
     ),
     "frames2video": CommandSpec(
@@ -676,19 +696,20 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("first", "first", "Local first-frame image path.", required=True, path_mode="file"),
             ParameterSpec("last", "last", "Local last-frame image path.", required=True, path_mode="file"),
             ParameterSpec("prompt", "prompt", "Generation prompt.", required=True),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("3.0", "3.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                default="seedance2.0_vip",
+                choices=("seedance1.5pro", "seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini", "seedance2.5"),
             ),
-            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int"),
-            ParameterSpec("video_resolution", "video_resolution", "Video resolution override.", choices=("720p", "1080p")),
+            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", default=5),
+            ParameterSpec("video_resolution", "video_resolution", "Video resolution.", required=True, choices=("480p", "720p", "1080p", "4k")),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/frames2video.py --first ./start.png --last ./end.png --prompt "season changes around the subject" --model-version seedance2.0fast',
+            'python3 scripts/frames2video.py --first ./start.png --last ./end.png --prompt "season changes around the subject" --model-version seedance2.0fast --video-resolution 720p',
         ),
     ),
     "multiframe2video": CommandSpec(
@@ -698,21 +719,22 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
         validator=validate_multiframe2video,
         parameters=(
             ParameterSpec("images", "images", "Two to twenty local image paths.", required=True, multiple=True, csv_split=True, path_mode="file"),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
             ParameterSpec("prompt", "prompt", "Shorthand prompt for exactly two images."),
-            ParameterSpec("duration", "duration", "Shorthand duration for exactly two images.", value_type="float"),
+            ParameterSpec("duration", "duration", "Shorthand duration for exactly two images.", value_type="float", default=3),
+            ParameterSpec("video_resolution", "video_resolution", "Video resolution.", required=True, choices=("720p", "1080p")),
             ParameterSpec("transition_prompt", "transition-prompt", "Repeat once per transition segment.", multiple=True),
             ParameterSpec("transition_duration", "transition-duration", "Repeat once per transition segment.", value_type="float", multiple=True),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/multiframe2video.py --images ./a.png,./b.png --prompt "the character turns to face camera"',
-            'python3 .agent/skills/dreamina-cli/scripts/multiframe2video.py --images ./a.png --images ./b.png --images ./c.png --transition-prompt "A turns into B" --transition-prompt "B turns into C"',
+            'python3 scripts/multiframe2video.py --images ./a.png,./b.png --prompt "the character turns to face camera" --video-resolution 720p',
+            'python3 scripts/multiframe2video.py --images ./a.png --images ./b.png --images ./c.png --transition-prompt "A turns into B" --transition-prompt "B turns into C" --video-resolution 720p',
         ),
     ),
     "multimodal2video": CommandSpec(
         name="multimodal2video",
-        description="Submit Dreamina's flagship multimodal video task.",
+        description='Submit Dreamina\'s flagship multimodal video task ("全能参考" / formerly ref2video).',
         output_mode="json",
         validator=validate_multimodal2video,
         parameters=(
@@ -720,25 +742,27 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("video", "video", "Repeat for each input video.", multiple=True, csv_split=True, path_mode="file"),
             ParameterSpec("audio", "audio", "Repeat for each input audio file.", multiple=True, csv_split=True, path_mode="file"),
             ParameterSpec("prompt", "prompt", "Optional edit prompt."),
-            ParameterSpec("session", "session", "Target Dreamina session ID.", value_type="int", min_value=0),
-            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", min_value=4, max_value=15),
+            ParameterSpec("duration", "duration", "Video duration in seconds.", value_type="int", min_value=4, max_value=30, default=5),
             ParameterSpec(
                 "ratio",
                 "ratio",
                 "Output aspect ratio.",
+                default="16:9",
                 choices=("1:1", "3:4", "16:9", "4:3", "9:16", "21:9"),
             ),
-            ParameterSpec("video_resolution", "video_resolution", "Video resolution.", choices=("720p", "1080p")),
+            ParameterSpec("video_resolution", "video_resolution", "Video resolution.", required=True, choices=("480p", "720p", "1080p", "4k")),
             ParameterSpec(
                 "model_version",
                 "model_version",
                 "Model version.",
-                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip"),
+                default="seedance2.0_vip",
+                choices=("seedance2.0", "seedance2.0fast", "seedance2.0_vip", "seedance2.0fast_vip", "seedance2.0mini", "seedance2.5"),
             ),
+            ParameterSpec("session", "session", "Dreamina session ID.", value_type="int", min_value=0, default=0),
             ParameterSpec("poll", "poll", "Optional polling window in seconds.", value_type="int", min_value=0),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/multimodal2video.py --image ./scene.png --audio ./music.mp3 --model-version seedance2.0fast --duration 5',
+            'python3 scripts/multimodal2video.py --image ./scene.png --audio ./music.mp3 --model-version seedance2.0fast --duration 5 --video-resolution 720p',
         ),
     ),
     "query_result": CommandSpec(
@@ -750,7 +774,7 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("download_dir", "download_dir", "Optional result download directory.", path_mode="dir", create_dir=True),
         ),
         examples=(
-            "python3 .agent/skills/dreamina-cli/scripts/query_result.py --submit-id 3f6eb41f425d23a3",
+            "python3 scripts/query_result.py --submit-id 3f6eb41f425d23a3",
         ),
     ),
     "list_task": CommandSpec(
@@ -761,27 +785,29 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("submit_id", "submit_id", "Optional submit_id filter."),
             ParameterSpec("gen_status", "gen_status", "Optional generation status filter."),
             ParameterSpec("gen_task_type", "gen_task_type", "Optional task type filter."),
-            ParameterSpec("limit", "limit", "Maximum tasks to return.", value_type="int", min_value=1, max_value=200),
+            ParameterSpec("limit", "limit", "Maximum tasks to return.", value_type="int", min_value=1, default=20),
             ParameterSpec("offset", "offset", "Pagination offset.", value_type="int", min_value=0),
         ),
         examples=(
-            "python3 .agent/skills/dreamina-cli/scripts/list_task.py --gen-status success --limit 20",
+            "python3 scripts/list_task.py --gen-status success --limit 20",
         ),
     ),
     "user_credit": CommandSpec(
         name="user_credit",
         description="Query the current Dreamina account credit.",
         output_mode="json",
-        examples=("python3 .agent/skills/dreamina-cli/scripts/user_credit.py",),
+        examples=("python3 scripts/user_credit.py",),
     ),
     "login": CommandSpec(
         name="login",
-        description="Reuse the current Dreamina OAuth login session or start OAuth Device Flow.",
+        description="Reuse the current Dreamina login session or start OAuth Device Flow.",
         output_mode="text",
         parameters=(
             ParameterSpec("headless", "headless", "Print OAuth authorization material and exit without polling checklogin.", value_type="bool"),
         ),
-        examples=("python3 .agent/skills/dreamina-cli/scripts/login.py --headless",),
+        examples=(
+            "python3 scripts/login.py --headless",
+        ),
     ),
     "login_checklogin": CommandSpec(
         name="login_checklogin",
@@ -791,22 +817,24 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("device_code", "device_code", "Device code printed by login.py --headless or relogin.py --headless.", required=True),
             ParameterSpec("poll", "poll", "Wait for up to N seconds before timing out; 0 checks once.", value_type="int", min_value=0),
         ),
-        examples=("python3 .agent/skills/dreamina-cli/scripts/login_checklogin.py --device-code <device_code> --poll 30",),
+        examples=("python3 scripts/login_checklogin.py --device-code <device_code> --poll 30",),
     ),
     "logout": CommandSpec(
         name="logout",
         description="Clear the current Dreamina login session.",
         output_mode="text",
-        examples=("python3 .agent/skills/dreamina-cli/scripts/logout.py",),
+        examples=("python3 scripts/logout.py",),
     ),
     "relogin": CommandSpec(
         name="relogin",
-        description="Clear the current Dreamina OAuth login state and force a fresh OAuth Device Flow login.",
+        description="Clear the current Dreamina session and force a fresh OAuth Device Flow login.",
         output_mode="text",
         parameters=(
             ParameterSpec("headless", "headless", "Print OAuth authorization material and exit without polling checklogin.", value_type="bool"),
         ),
-        examples=("python3 .agent/skills/dreamina-cli/scripts/relogin.py --headless",),
+        examples=(
+            "python3 scripts/relogin.py --headless",
+        ),
     ),
     "session": CommandSpec(
         name="session",
@@ -817,21 +845,21 @@ COMMAND_SPECS: dict[str, CommandSpec] = {
             ParameterSpec("action", "action", "Session action.", required=True, choices=("create", "list", "search", "rename", "delete")),
             ParameterSpec("name", "name", "Session name for create/search, or the new name for rename."),
             ParameterSpec("session_id", "session_id", "Session ID for rename/delete.", value_type="int"),
-            ParameterSpec("max_count", "max-count", "Maximum sessions to list.", value_type="int", min_value=1, max_value=100),
+            ParameterSpec("max_count", "max-count", "Maximum sessions to list.", value_type="int", min_value=1, max_value=100, default=30),
         ),
         examples=(
-            'python3 .agent/skills/dreamina-cli/scripts/session.py --action create --name "My Video Project"',
-            "python3 .agent/skills/dreamina-cli/scripts/session.py --action list --max-count 30",
-            'python3 .agent/skills/dreamina-cli/scripts/session.py --action search --name "Video"',
-            'python3 .agent/skills/dreamina-cli/scripts/session.py --action rename --session-id 10086 --name "New Project Name"',
-            "python3 .agent/skills/dreamina-cli/scripts/session.py --action delete --session-id 10086",
+            'python3 scripts/session.py --action create --name "My Video Project"',
+            "python3 scripts/session.py --action list --max-count 30",
+            'python3 scripts/session.py --action search --name "Video"',
+            'python3 scripts/session.py --action rename --session-id 10086 --name "New Project Name"',
+            "python3 scripts/session.py --action delete --session-id 10086",
         ),
     ),
     "version": CommandSpec(
         name="version",
         description="Print Dreamina CLI version information.",
         output_mode="json_or_text",
-        examples=("python3 .agent/skills/dreamina-cli/scripts/version.py",),
+        examples=("python3 scripts/version.py",),
     ),
 }
 
@@ -892,37 +920,26 @@ def build_parser(spec: CommandSpec) -> argparse.ArgumentParser:
 
 def build_cli_args(spec: CommandSpec, namespace: argparse.Namespace) -> list[str]:
     if spec.name == "login_checklogin":
-        args = ["login", "checklogin"]
-        args.extend(("--device_code", namespace.device_code))
+        args = ["login", "checklogin", "--device_code", namespace.device_code]
         if namespace.poll is not None:
             args.extend(("--poll", stringify_value(namespace.poll)))
         return args
 
     if spec.name == "session":
-        action = namespace.action
-        args = ["session", action]
-
-        if action == "create":
+        args = ["session", namespace.action]
+        if namespace.action == "create":
             if namespace.name:
                 args.append(namespace.name)
-            return args
-
-        if action == "list":
+        elif namespace.action == "list":
             if namespace.max_count is not None:
                 args.extend(("--max-count", stringify_value(namespace.max_count)))
-            return args
-
-        if action == "search":
+        elif namespace.action == "search":
             args.append(namespace.name)
-            return args
-
-        if action == "rename":
+        elif namespace.action == "rename":
             args.extend((stringify_value(namespace.session_id), namespace.name))
-            return args
-
-        if action == "delete":
+        elif namespace.action == "delete":
             args.append(stringify_value(namespace.session_id))
-            return args
+        return args
 
     args = [spec.name]
     for parameter in spec.parameters:
@@ -1037,6 +1054,7 @@ def capabilities_payload() -> dict[str, Any]:
                         "choices": list(parameter.choices),
                         "min_value": parameter.min_value,
                         "max_value": parameter.max_value,
+                        "default": parameter.default,
                         "path_mode": parameter.path_mode,
                     }
                     for parameter in spec.parameters
@@ -1046,7 +1064,7 @@ def capabilities_payload() -> dict[str, Any]:
 
     return {
         "skill": "dreamina-cli",
-        "wrapper_version": 1,
+        "wrapper_version": 3,
         "command_count": len(commands),
         "commands": commands,
     }
@@ -1074,6 +1092,8 @@ def markdown_capabilities() -> str:
                         notes.append(f"max: {parameter.max_value}")
                 if parameter.multiple:
                     notes.append("repeatable")
+                if parameter.default is not None:
+                    notes.append(f"default: {parameter.default}")
                 if parameter.path_mode:
                     notes.append(f"path: {parameter.path_mode}")
                 lines.append(

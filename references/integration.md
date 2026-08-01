@@ -14,9 +14,9 @@ Recommended agent pattern:
 Minimal example:
 
 ```bash
-python3 .agent/skills/dreamina-cli/scripts/list_capabilities.py --format json
-python3 .agent/skills/dreamina-cli/scripts/text2image.py --prompt "luxury ring on white" --ratio 1:1 --dry-run
-python3 .agent/skills/dreamina-cli/scripts/text2image.py --prompt "luxury ring on white" --ratio 1:1 --poll 60
+python3 ./scripts/list_capabilities.py --format json
+python3 ./scripts/text2image.py --prompt "luxury ring on white" --ratio 1:1 --resolution-type 2k --dry-run
+python3 ./scripts/text2image.py --prompt "luxury ring on white" --ratio 1:1 --resolution-type 2k --poll 60
 ```
 
 ## 2. Portability strategy
